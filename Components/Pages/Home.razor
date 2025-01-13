@@ -1,0 +1,141 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject CardClash.Models.ConfigurationValue Config
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Home</PageTitle>
+
+<div class="container">
+    <form class="form-box">
+        <h3>Login</h3>
+        <h4 style="color: red; font-weight: 700;">@errorMessage</h4>
+
+        <input type="email" placeholder="Email" @bind="emailInput" />
+        <input type="password" placeholder="Password" @bind="passwordInput" />
+
+        <div class="flex-container">
+
+            <button type="button" class="btn-primary"
+                    required @onclick="LoginUser">
+                Login
+            </button>
+
+            <button type="button" class="btn-secondary"
+                    required @onclick="RegisterUser">
+                Register
+            </button>
+        </div>
+
+        @if(startLoading)
+        {
+            <progress id="progress-bar" style="margin-top: 20px; 
+                display: inline-block; justify-content: center; align-items: center;" 
+                    aria-label="Content loading…">
+                </progress>
+        }
+
+    </form>
+</div>
+
+@code {
+    private string url = "";
+
+    private string? emailInput;
+    private string? passwordInput;
+    private string errorMessage = "";
+
+    private HttpClient httpClient = new();
+    private bool playerExists = false;
+    private bool startLoading = false;
+
+
+    protected override void OnInitialized()
+    {
+        url = Config.Url;
+    }
+
+    private async Task FetchPlayer(string player)
+    {
+        startLoading = true;
+        try
+        {
+            playerExists = await httpClient.GetFromJsonAsync<bool>($"{url}{player}");
+        }
+        catch (Exception ex)
+        {
+            startLoading = false;
+            errorMessage = $"Error fetching player: {ex.Message}";
+        }
+    }
+
+    private async Task AddPlayer()
+    {
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync($"{url}", new { email = emailInput, password = passwordInput });
+            if (!response.IsSuccessStatusCode)
+            {
+                startLoading = false;
+                errorMessage = $"Error adding player: Email already exists...";
+            } else
+            {
+                Navigation.NavigateTo("/game");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error adding player: {ex.Message}";
+        }
+    }
+
+    private async void RegisterUser()
+    {
+        if(string.IsNullOrEmpty(emailInput) || string.IsNullOrEmpty(passwordInput))
+        {
+            errorMessage = "Please fill out both fields with valid inputs";
+        }
+        else
+        {
+            try
+            {
+                await AddPlayer();
+                return;
+            }catch(Exception e)
+            {
+                startLoading = false;
+                System.Console.WriteLine($"ERROR: {e.Message}");
+            }
+        }
+    }
+
+    private async void LoginUser()
+    {
+        if (string.IsNullOrEmpty(emailInput) || string.IsNullOrEmpty(passwordInput))
+        {
+            errorMessage = "Please fill out both fields with valid inputs";
+        }
+        else
+        {
+            try
+            {
+                await FetchPlayer($"{emailInput}/{passwordInput}");
+                if(!playerExists)
+                {
+                    startLoading = false;
+                    //errorMessage = "Invalid Credentials";
+                } else
+                {
+                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", "userEmail", emailInput);
+                    Navigation.NavigateTo("/game", forceLoad: true);
+                    return;
+                }
+
+            }catch(Exception e)
+            {
+                errorMessage = e.Message;//"Invalid Credentials";
+            }        
+        }
+    }
+
+}
