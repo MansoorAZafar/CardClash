@@ -53,11 +53,11 @@
     protected override void OnInitialized()
     {
         url = Config.Url;
-        System.Console.WriteLine($"TEST URL: {url}");
     }
 
     private async Task FetchPlayer(string player)
     {
+        System.Console.WriteLine($"TEST URL: {url}{player}");
         startLoading = true;
         try
         {
