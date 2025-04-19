@@ -127,7 +127,7 @@
                 } else
                 {
                     await JSRuntime.InvokeVoidAsync("localStorage.setItem", "userEmail", emailInput);
-                    Navigation.NavigateTo("/game", forceLoad: true);
+                    Navigation.NavigateTo("/", forceLoad: true);
                     return;
                 }
 
